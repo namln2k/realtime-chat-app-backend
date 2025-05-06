@@ -12,8 +12,10 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "typeorm": "npx typeorm -d dist/database/data-source.js",
-    "migration:generate": "npm run typeorm -- migration:generate",
+    "typeorm": "yarn build && npx typeorm -d dist/database/data-source.js",
+    "migration:generate": "yarn typeorm -- migration:generate",
+    "migration:run": "yarn typeorm -- migration:run -d dist/database/data-source.js",
+    "seed:run": "yarn build && ts-node ./node_modules/typeorm-extension/bin/cli.cjs seed:run -d dist/database/data-source.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -40,7 +42,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.22"
+    "typeorm": "^0.3.22",
+    "typeorm-extension": "^3.7.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

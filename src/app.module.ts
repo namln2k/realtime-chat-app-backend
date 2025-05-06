@@ -33,9 +33,11 @@ import { UsersModule } from './users/users.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: () => ({
+      // eslint-disable-next-line @typescript-eslint/require-await
+      useFactory: async () => ({
         ...dataSource.options,
         autoLoadEntities: true,
+        seeds: ['dist/database/seeds/**/*.js'],
       }),
     }),
   ],
