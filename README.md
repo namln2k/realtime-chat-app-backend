@@ -39,6 +39,7 @@ $ yarn typeorm migration:run
 ### Seed database
 
 ```bash
+$ yarn seed:run
 
 ```
 

@@ -1,3 +1,3 @@
-export const APP_CONSTANTS = {
+export const JWT = {
   HASH_ROUNDS: 10,
 };

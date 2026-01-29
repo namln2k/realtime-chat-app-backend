@@ -1,41 +1,47 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import { APP_CONSTANTS } from 'src/common/constants/app.constant';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { SQLITE_ERROR_CODES } from 'src/common/constants/error-codes.constant';
+import { UserRole } from 'src/common/constants/roles.constants';
 import { User } from 'src/users/entities/user.entity';
 import { UsersService } from 'src/users/users.service';
+import { Repository } from 'typeorm';
 import { LogInDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { Role } from './entities/role.entity';
+import { TokenService } from './token.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly usersService: UsersService,
-    private readonly jwtService: JwtService,
+    @InjectRepository(User)
+    private readonly userService: UsersService,
+    private readonly tokenService: TokenService,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
   ) {}
 
-  async createHash(password: string): Promise<string> {
-    return await bcrypt.hash(password, APP_CONSTANTS.HASH_ROUNDS);
-  }
-
-  async compareHash(password: string, hash: string): Promise<boolean> {
-    return await bcrypt.compare(password, hash);
-  }
-
-  async register(register: RegisterDto): Promise<User> {
+  async register(register: RegisterDto): Promise<boolean> {
     const { email, name, password } = register;
 
+    const userRole = await this.roleRepository.findBy({
+      name: UserRole.USER,
+    });
+
     try {
-      const user = new User();
+      await this.userService.save({
+        email,
+        name,
+        password: await this.tokenService.createHash(password),
+        roles: userRole,
+      });
 
-      user.email = email;
-      user.name = name;
-      user.password = await this.createHash(password);
-
-      return await this.usersService.create(user);
+      return true;
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (error?.code === SQLITE_ERROR_CODES.SQLITE_CONSTRAINT) {
         throw new BadRequestException('Email already exists');
       }
@@ -45,13 +51,23 @@ export class AuthService {
   }
 
   async authenticate({ email, password }: LogInDto): Promise<User> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.userService.findOne({
+      where: {
+        email,
+      },
+      relations: {
+        roles: true,
+      },
+    });
 
     if (!user) {
       throw new BadRequestException('Invalid credentials');
     }
 
-    const isPasswordMatch = await this.compareHash(password, user.password);
+    const isPasswordMatch = await this.tokenService.compareHash(
+      password,
+      user.password,
+    );
 
     if (!isPasswordMatch) {
       throw new BadRequestException('Invalid credentials');
@@ -60,21 +76,44 @@ export class AuthService {
     return user;
   }
 
-  async login(loginDto: LogInDto): Promise<{ accessToken: string }> {
-    const user = await this.authenticate(loginDto);
+  async refreshToken(refreshTokenDto: RefreshTokenDto) {
+    const existedToken = await this.tokenService.authenticateRefreshToken(
+      refreshTokenDto.token,
+    );
 
-    return await this.generateAccessToken(user);
-  }
+    if (!existedToken) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-  async generateAccessToken(
-    user: Partial<User>,
-  ): Promise<{ accessToken: string }> {
-    const accessToken = await this.jwtService.signAsync({
-      id: user.id,
-      email: user.email,
-      name: user.name,
+    const user = await this.userService.findOne({
+      where: {
+        id: existedToken.userId,
+      },
     });
 
-    return { accessToken };
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.createTokens(user);
+  }
+
+  async login(
+    loginDto: LogInDto,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const user = await this.authenticate(loginDto);
+
+    return this.createTokens(user);
+  }
+
+  async createTokens(user: User) {
+    const accessToken = await this.tokenService.createAccessToken(user);
+    const refreshToken = this.tokenService.createRefreshToken();
+    await this.tokenService.storeRefreshToken(refreshToken, user.id);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 }
