@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { UserRole } from 'src/common/constants/roles.constants';
 import { ROLES_KEY } from 'src/common/decorators/roles.decorator';
+import { IS_PUBLIC_KEY } from 'src/common/decorators/public.decorator';
 import {
   AuthenticatedRequest,
   AuthPayload,
@@ -24,19 +25,18 @@ export class JwtGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request: AuthenticatedRequest = context.switchToHttp().getRequest();
-
-    const roles = this.reflector.getAllAndOverride<boolean>(ROLES_KEY, [
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    // If roles decorator is not found, this is a public route and should be accessible.
-    if (!roles) {
+    if (isPublic) {
       return true;
     }
 
-    const token = this.extractTokenFromHeader(request);
+    const request: AuthenticatedRequest = context.switchToHttp().getRequest();
+
+    const token = this.extractTokenFromCookie(request);
     if (!token) {
       throw new UnauthorizedException();
     }
@@ -47,13 +47,18 @@ export class JwtGuard implements CanActivate {
           secret: this.configService.get<string>('JWT_SECRET'),
         });
 
+      // Attach payload to request so it can be used by decorators and controllers
+      request['user'] = payload;
+
       const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
         ROLES_KEY,
         [context.getHandler(), context.getClass()],
       );
 
-      console.log(payload.roles);
-      console.log(requiredRoles);
+      // If no roles are required, authentication is enough
+      if (!requiredRoles || requiredRoles.length === 0) {
+        return true;
+      }
 
       return payload.roles.some((role) => requiredRoles.includes(role.name));
     } catch {
@@ -61,8 +66,7 @@ export class JwtGuard implements CanActivate {
     }
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+  private extractTokenFromCookie(request: Request): string | undefined {
+    return request.cookies?.Authentication;
   }
 }

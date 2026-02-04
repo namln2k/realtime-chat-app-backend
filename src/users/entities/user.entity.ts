@@ -28,8 +28,16 @@ export class User {
   @Column()
   name: string;
 
+  @ApiProperty()
+  @Column({ unique: true, nullable: true })
+  username: string;
+
+  @ApiProperty()
+  @Column({ nullable: true })
+  avatar: string;
+
   @ManyToMany(() => Role)
-  @JoinTable()
+  @JoinTable({ name: 'user_roles' })
   roles: Role[];
 
   @ApiProperty()

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,6 +15,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { Role } from './entities/role.entity';
 import { TokenService } from './token.service';
+import { AuthResponse, AuthUser } from 'src/common/types/authenticated-request.type';
 
 @Injectable()
 export class AuthService {
@@ -25,36 +27,35 @@ export class AuthService {
     private readonly roleRepository: Repository<Role>,
   ) {}
 
-  async register(register: RegisterDto): Promise<boolean> {
-    const { email, name, password } = register;
+  async register(register: RegisterDto): Promise<AuthResponse> {
+    const { email, name, username, password } = register;
 
     const userRole = await this.roleRepository.findBy({
       name: UserRole.USER,
     });
 
     try {
-      await this.userService.save({
+      const user = await this.userService.save({
         email,
         name,
+        username,
         password: await this.tokenService.createHash(password),
         roles: userRole,
       });
 
-      return true;
+      return this.createTokens(user as User);
     } catch (error) {
       if (error?.code === SQLITE_ERROR_CODES.SQLITE_CONSTRAINT) {
-        throw new BadRequestException('Email already exists');
+        throw new BadRequestException('Email or username already exists');
       }
 
       throw error;
     }
   }
 
-  async authenticate({ email, password }: LogInDto): Promise<User> {
+  async authenticate({ identifier, password }: LogInDto): Promise<User> {
     const user = await this.userService.findOne({
-      where: {
-        email,
-      },
+      where: [{ email: identifier }, { username: identifier }],
       relations: {
         roles: true,
       },
@@ -98,9 +99,7 @@ export class AuthService {
     return this.createTokens(user);
   }
 
-  async login(
-    loginDto: LogInDto,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  async login(loginDto: LogInDto): Promise<AuthResponse> {
     const user = await this.authenticate(loginDto);
 
     return this.createTokens(user);
@@ -114,6 +113,34 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        createdAt: user.createdAt,
+      },
+    };
+  }
+
+  async getMe(userId: string): Promise<AuthUser> {
+    const user = await this.userService.findOne({
+      where: {
+        id: userId,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      avatar: user.avatar,
+      createdAt: user.createdAt,
     };
   }
 }

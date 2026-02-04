@@ -3,9 +3,8 @@ import { IsEmail, IsNotEmpty } from 'class-validator';
 
 export class LogInDto {
   @ApiProperty()
-  @IsEmail()
   @IsNotEmpty()
-  readonly email: string;
+  readonly identifier: string;
 
   @ApiProperty()
   @IsNotEmpty()

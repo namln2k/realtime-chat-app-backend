@@ -27,7 +27,7 @@ import { UsersModule } from './users/users.module';
         return {
           secret,
           signOptions: {
-            expiresIn: configService.get<string>('JWT_EXPIRATION_TIME') || '1h',
+            expiresIn: `${configService.get<string>('JWT_EXPIRY_HOURS')}h` || '1h',
           },
         };
       },

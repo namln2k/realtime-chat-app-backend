@@ -28,6 +28,15 @@ export class RegisterDto {
   readonly name: string;
 
   @ApiProperty()
+  @IsNotEmpty({
+    message: 'Please provide a valid username',
+  })
+  @IsAlphanumeric(undefined, {
+    message: 'Username must contain only letters and numbers',
+  })
+  readonly username: string;
+
+  @ApiProperty()
   @MinLength(8, {
     message: 'Password must be at least 8 characters long',
   })
