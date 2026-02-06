@@ -25,4 +25,9 @@ export class UsersService {
   async save(user: DeepPartial<User>) {
     return await this.userRepository.save(user);
   }
+
+  async update(id: string, updateUserDto: DeepPartial<User>) {
+    await this.userRepository.update(id, updateUserDto);
+    return this.findById(id);
+  }
 }

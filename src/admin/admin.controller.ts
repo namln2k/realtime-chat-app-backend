@@ -6,7 +6,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 @Controller('admin')
 export class AdminController {
   @UseGuards(JwtGuard)
-  @Roles(UserRole.ADMIN, UserRole.MODERATOR, UserRole.USER)
+  @Roles(UserRole.ADMIN, UserRole.USER)
   @Get()
   async admin() {
     await new Promise((resolve) => setTimeout(resolve, 1000));

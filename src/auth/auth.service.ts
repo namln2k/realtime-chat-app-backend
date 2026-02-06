@@ -20,7 +20,6 @@ import { AuthResponse, AuthUser } from 'src/common/types/authenticated-request.t
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
     private readonly userService: UsersService,
     private readonly tokenService: TokenService,
     @InjectRepository(Role)
@@ -59,6 +58,7 @@ export class AuthService {
       relations: {
         roles: true,
       },
+      select: ['id', 'email', 'password', 'name', 'username', 'avatar', 'createdAt', 'roles'],
     });
 
     if (!user) {
@@ -90,6 +90,9 @@ export class AuthService {
       where: {
         id: existedToken.userId,
       },
+      relations: {
+        roles: true,
+      },
     });
 
     if (!user) {
@@ -105,7 +108,7 @@ export class AuthService {
     return this.createTokens(user);
   }
 
-  async createTokens(user: User) {
+  async createTokens(user: User): Promise<AuthResponse> {
     const accessToken = await this.tokenService.createAccessToken(user);
     const refreshToken = this.tokenService.createRefreshToken();
     await this.tokenService.storeRefreshToken(refreshToken, user.id);
@@ -119,6 +122,7 @@ export class AuthService {
         username: user.username,
         email: user.email,
         avatar: user.avatar,
+        roles: user.roles?.map((role) => role.name) || [],
         createdAt: user.createdAt,
       },
     };
@@ -128,6 +132,9 @@ export class AuthService {
     const user = await this.userService.findOne({
       where: {
         id: userId,
+      },
+      relations: {
+        roles: true,
       },
     });
     if (!user) {
@@ -140,6 +147,7 @@ export class AuthService {
       username: user.username,
       email: user.email,
       avatar: user.avatar,
+      roles: user.roles?.map((role) => role.name) || [],
       createdAt: user.createdAt,
     };
   }

@@ -7,7 +7,6 @@ import { Role } from '../../auth/entities/role.entity';
 
 const roles = [
   { id: uuidv4(), name: UserRole.ADMIN },
-  { id: uuidv4(), name: UserRole.MODERATOR },
   { id: uuidv4(), name: UserRole.USER },
 ];
 

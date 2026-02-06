@@ -31,7 +31,7 @@ export class TokenService {
     return await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
-      roles: user.roles,
+      roles: user.roles?.map((role) => role.name) || [],
       name: user.name,
     });
   }
