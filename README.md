@@ -8,19 +8,11 @@ A boilerplate for an authentication and authorization RESTful API server using [
 
 Install [Node.js](https://nodejs.org/) version 20 or higher.
 
-### Yarn
-
-Install [Yarn](https://yarnpkg.com/) globally if not already installed:
-
-```bash
-$ npm install -g yarn
-```
-
 ## Project setup
 
 ```bash
 # Install dependencies
-$ yarn install
+$ npm install
 ```
 
 ```bash
@@ -33,38 +25,37 @@ $ cp .env.example .env
 ### Migrate database schemas
 
 ```bash
-$ yarn typeorm migration:run
+$ npm run typeorm migration:run
 ```
 
 ### Seed database
 
 ```bash
-$ yarn seed:run
-
+$ npm run seed:run
 ```
 
 ## Compile and run the project
 
 ```bash
 # development
-$ yarn run start
+$ npm run start
 
 # watch mode
-$ yarn run start:dev
+$ npm run start:dev
 
 # production mode
-$ yarn run start:prod
+$ npm run start:prod
 ```
 
 ## Run tests
 
 ```bash
 # unit tests
-$ yarn run test
+$ npm run test
 
 # e2e tests
-$ yarn run test:e2e
+$ npm run test:e2e
 
 # test coverage
-$ yarn run test:cov
+$ npm run test:cov
 ```
